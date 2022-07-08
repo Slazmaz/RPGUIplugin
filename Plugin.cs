@@ -6,59 +6,42 @@ using Dalamud.Logging;
 using Dalamud.Plugin;
 using DalamudPluginProjectTemplate.Attributes;
 using System;
+using System.IO;
+using System.Reflection;
 
-namespace DalamudPluginProjectTemplate
+namespace RPGUIplugin
 {
     public class Plugin : IDalamudPlugin
     {
         private readonly DalamudPluginInterface pluginInterface;
-        private readonly ChatGui chat;
         private readonly ClientState clientState;
 
-        private readonly PluginCommandManager<Plugin> commandManager;
         private readonly Configuration config;
-        private readonly WindowSystem windowSystem;
 
-        public string Name => "Your Plugin's Display Name";
+        private Parameters parameters;
+
+        public string Name => "RPGUI";
 
         public Plugin(
             DalamudPluginInterface pi,
-            CommandManager commands,
-            ChatGui chat,
-            ClientState clientState)
+            ClientState cs)
         {
             this.pluginInterface = pi;
-            this.chat = chat;
-            this.clientState = clientState;
+            this.clientState = cs;
 
-            // Get or create a configuration object
-            this.config = (Configuration)this.pluginInterface.GetPluginConfig()
-                          ?? this.pluginInterface.Create<Configuration>();
+            // you might normally want to embed resources and load them from the manifest stream
+            var assemblyLocation = Path.GetDirectoryName(pluginInterface.AssemblyLocation.DirectoryName + "\\");
+            var imagePath = Path.Combine(assemblyLocation, @"Textures/testtex.png");
 
-            // Initialize the UI
-            this.windowSystem = new WindowSystem(typeof(Plugin).AssemblyQualifiedName);
+            var paramBorder = this.pluginInterface.UiBuilder.LoadImage(Path.Combine(assemblyLocation, @"Textures/border.png"));
+            var paramGradient = this.pluginInterface.UiBuilder.LoadImage(Path.Combine(assemblyLocation, @"Textures/gradient.png"));
+            var paramHealth = this.pluginInterface.UiBuilder.LoadImage(Path.Combine(assemblyLocation, @"Textures/health.png"));
+            var paramMana = this.pluginInterface.UiBuilder.LoadImage(Path.Combine(assemblyLocation, @"Textures/mana.png"));
+            var paramLimit = this.pluginInterface.UiBuilder.LoadImage(Path.Combine(assemblyLocation, @"Textures/limit.png"));
+            var paramBackground = this.pluginInterface.UiBuilder.LoadImage(Path.Combine(assemblyLocation, @"Textures/background.png"));
+            this.parameters = new Parameters(paramBorder, paramGradient, paramHealth, paramMana, paramLimit, paramBackground);
 
-            var window = this.pluginInterface.Create<PluginWindow>();
-            if (window is not null)
-            {
-                this.windowSystem.AddWindow(window);
-            }
-
-            this.pluginInterface.UiBuilder.Draw += this.windowSystem.Draw;
-
-            // Load all of our commands
-            this.commandManager = new PluginCommandManager<Plugin>(this, commands);
-        }
-
-        [Command("/example1")]
-        [HelpMessage("Example help message.")]
-        public void ExampleCommand1(string command, string args)
-        {
-            // You may want to assign these references to private variables for convenience.
-            // Keep in mind that the local player does not exist until after logging in.
-            var world = this.clientState.LocalPlayer?.CurrentWorld.GameData;
-            this.chat.Print($"Hello, {world?.Name}!");
-            PluginLog.Log("Message sent successfully.");
+            this.pluginInterface.UiBuilder.Draw += this.parameters.Draw;
         }
 
         #region IDisposable Support
@@ -66,12 +49,9 @@ namespace DalamudPluginProjectTemplate
         {
             if (!disposing) return;
 
-            this.commandManager.Dispose();
-
             this.pluginInterface.SavePluginConfig(this.config);
 
-            this.pluginInterface.UiBuilder.Draw -= this.windowSystem.Draw;
-            this.windowSystem.RemoveAllWindows();
+            this.pluginInterface.UiBuilder.Draw -= this.parameters.Draw;
         }
 
         public void Dispose()

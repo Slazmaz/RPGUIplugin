@@ -1,21 +1,24 @@
 ﻿using Dalamud.Configuration;
 using Dalamud.Plugin;
+using System;
 
-namespace DalamudPluginProjectTemplate
+namespace RPGUIplugin
 {
+    [Serializable]
     public class Configuration : IPluginConfiguration
     {
-        int IPluginConfiguration.Version { get; set; }
+        public int Version { get; set; } = 0;
 
-        #region Saved configuration values
-        public string CoolText { get; set; }
-        #endregion
+        public bool SomePropertyToBeSavedAndWithADefault { get; set; } = true;
 
-        private readonly DalamudPluginInterface pluginInterface;
+        // the below exist just to make saving less cumbersome
 
-        public Configuration(DalamudPluginInterface pi)
+        [NonSerialized]
+        private DalamudPluginInterface pluginInterface;
+
+        public void Initialize(DalamudPluginInterface pluginInterface)
         {
-            this.pluginInterface = pi;
+            this.pluginInterface = pluginInterface;
         }
 
         public void Save()
